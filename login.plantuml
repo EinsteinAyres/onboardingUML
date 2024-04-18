@@ -1,0 +1,78 @@
+@startuml
+autonumber
+
+== Cenário Login com Convite para Oboarding de Migração ==
+
+skinparam actorStyle awesome
+actor Usuário
+
+participant "App Nativo"
+participant "Login Backend"
+participant "Convite Frontend"
+participant "Home Backend"
+participant "srv-convite-onboarding"
+participant "Microsvc-log"
+
+
+Usuário  -> "App Nativo": Realiza Login
+activate "App Nativo"
+
+"App Nativo" -> "Login Backend": login()
+deactivate "App Nativo"
+activate "Login Backend"
+
+"Login Backend" -> "Login Backend": validaRegrasLogin()
+
+"Login Backend" -> "Home Backend": renderizaHome()
+deactivate "Login Backend"
+activate "Home Backend"
+
+"Home Backend" -> "Home Backend": processaRegrasHome()
+
+"Home Backend" ->o "Usuário": Apresenta convite
+deactivate "Home Backend"
+
+
+
+alt Clicou N_EVENTOS
+
+Usuário  o-> "Convite Frontend": Clicou no link Call to Action
+activate "Convite Frontend"
+
+"Convite Frontend" -> "Home Backend": registraAcao("N_EVENTOS")
+deactivate "Convite Frontend"
+activate "Home Backend"
+
+note left of "srv-convite-onboarding": Sem necessidade de stateless ou \n qualquer outro controle de sessão. \n \nHeader \n x-request-id - "correlation ID para log" \n  \n POST \n\nBODY \n \n{\n cnpj: "345654566000145", \n cpf:"22233344411", evento: "N_EVENTOS" \n} \n >>>>>>temos que solicitar criaçao de TOPIC
+
+
+"Home Backend" -> "srv-convite-onboarding": POST: /convite/ação
+deactivate "Home Backend"
+activate "srv-convite-onboarding"
+
+"srv-convite-onboarding" -> "Microsvc-log": log (evento)
+deactivate "srv-convite-onboarding"
+activate "Microsvc-log"
+
+"Microsvc-log" -> "srv-convite-onboarding": ok
+deactivate "Microsvc-log"
+activate "srv-convite-onboarding"
+
+"srv-convite-onboarding" -> "Home Backend": HTTP 201
+deactivate "srv-convite-onboarding"
+activate "Home Backend"
+
+"Home Backend" -> "Home Backend": Fechar banner do convite
+
+"Home Backend" -> "Home Backend": Exibir Home
+
+"Home Backend" ->o Usuário: Exibir Home
+deactivate "Home Backend"
+
+
+
+end
+
+
+
+@enduml

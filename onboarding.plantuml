@@ -1,0 +1,153 @@
+@startuml
+
+
+== Cenário Onboarding ==
+
+skinparam actorStyle awesome
+actor Usuário
+
+participant "App Nativo"
+participant "Backend"
+participant "srv-convite-onboarding"
+participant "Elegibilidade DB"
+
+
+Usuário  o-> "App Nativo": Abre app
+activate "App Nativo"
+
+"App Nativo" -> Usuário:Apresenta tela solicitando CNPJ e CPF
+deactivate "App Nativo"
+activate Usuário
+
+
+
+Usuário  -> "Backend":Inicia Onboarding (cnpj, cpf)
+deactivate Usuário
+activate "Backend"
+
+
+
+"Backend" -> "srv-convite-onboarding": PUT: /convites/status
+deactivate "Backend"
+activate "srv-convite-onboarding"
+
+note right of "Backend"
+
+Regras da Request
+-cpf sem máscara
+-cnpj sem máscara
+-validação campos vazios
+-validaçao campos fora do tamanho esperado
+
+Request
+{
+    cnpj="121212121221",
+    cpf="3232323233",
+    status="iniciado"
+}
+
+end note
+
+
+group Motor de Regras  
+
+"srv-convite-onboarding" -> "Elegibilidade DB": Obter convite
+deactivate "srv-convite-onboarding"
+activate "Elegibilidade DB"
+
+"srv-convite-onboarding" -> "Elegibilidade DB": Gravar Status "Iniciado"
+deactivate "Elegibilidade DB"
+activate "srv-convite-onboarding"
+
+"srv-convite-onboarding" ->o "srv-convite-onboarding": Processar regras
+deactivate "srv-convite-onboarding"
+
+
+end 
+
+
+
+group Elegível 
+
+
+"srv-convite-onboarding" -> "Backend":HTTP 200 {status= "iniciado"}
+deactivate "srv-convite-onboarding"
+activate "Backend"
+
+
+"Backend" -> Usuário: Obter Apresentar Onboarding
+deactivate "Backend"
+activate Usuário
+
+Usuário -> "Backend": Realiza Onboarding
+deactivate Usuário
+activate "Backend"
+
+"Backend" -> "Backend": Jornada de Onboarding do usuário
+
+"Backend" ->o "srv-convite-onboarding": PUT:/convite/status
+deactivate "Backend"
+
+
+
+
+
+group Se acesso de elegibilidade OK
+
+"srv-convite-onboarding" o-> "Elegibilidade DB": Registra fim onboarding
+activate "Elegibilidade DB"
+
+"Elegibilidade DB" -> "srv-convite-onboarding": Confirma registro em DB
+deactivate "Elegibilidade DB"
+activate "srv-convite-onboarding"
+
+
+"srv-convite-onboarding" ->o "Backend": HTTP 200
+deactivate "srv-convite-onboarding"
+
+
+end
+
+
+
+
+group Se acesso de elegibilidade Não-OK
+
+"srv-convite-onboarding" o-> "Elegibilidade DB": Erro na comunicação DB
+activate "Elegibilidade DB"
+
+"Elegibilidade DB" -> "srv-convite-onboarding": Retorna erro na comunicação DB
+deactivate "Elegibilidade DB"
+activate "srv-convite-onboarding"
+
+"srv-convite-onboarding" ->o "Backend": HTTP 422 ERROR: retorna erro de origem
+deactivate "srv-convite-onboarding"
+
+
+end
+end
+
+
+group Onboarding já realizado
+
+"srv-convite-onboarding" ->o "Backend": HTTP 4XX Onboarding já realizado
+
+end
+
+
+
+group Não elegível
+
+"srv-convite-onboarding" ->o "Backend": HTTP 404 NOT FOUND
+
+
+
+end
+
+
+
+
+
+== Fim do Cenário Onboarding ==
+
+@enduml
